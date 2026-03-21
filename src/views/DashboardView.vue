@@ -32,14 +32,19 @@
             <Banknote :size="18" style="color:var(--clr-warning)" />
           </div>
           <div class="stat-label">Pinjaman Aktif</div>
-          <div class="stat-value">{{ data.pinjamanAktif }}</div>
+          <div class="stat-value money" v-if="data.pinjamanAktif > 0">{{ formatRupiah(data.totalPinjaman) }}</div>
+          <div class="stat-value" v-else style="color:var(--clr-text-3)">Tidak ada</div>
         </div>
         <div class="stat-card">
           <div class="stat-icon" style="background:var(--clr-danger-bg)">
             <TrendingDown :size="18" style="color:var(--clr-danger)" />
           </div>
           <div class="stat-label">Sisa Pinjaman</div>
-          <div class="stat-value money">{{ formatRupiah(data.sisaPinjaman) }}</div>
+          <div class="stat-value" v-if="data.pinjamanAktif > 0">
+            <span style="color:var(--clr-danger);font-weight:700">{{ data.sisaPinjaman }}%</span>
+            <span class="text-xs text-muted" style="margin-left:4px">belum diangsur</span>
+          </div>
+          <div class="stat-value" v-else style="color:var(--clr-text-3)">-</div>
         </div>
         <div class="stat-card" :class="{ 'border-danger': data.angsuranTerlambat > 0 }">
           <div class="stat-icon" style="background:var(--clr-warning-bg)">

@@ -84,6 +84,9 @@
     <!-- Mobile overlay -->
     <div class="mobile-overlay" v-if="mobileOpen" @click="mobileOpen = false" />
 
+    <!-- Chatbot — hanya untuk member -->
+    <ChatWidget v-if="!authStore.isAdmin" />
+
     <!-- Main content -->
     <div class="main-wrap">
       <!-- Header -->
@@ -191,6 +194,7 @@ async function doLogout() {
   authStore.logout()
   await router.push('/login')
 }
+import ChatWidget from '@/components/ChatWidget.vue'
 </script>
 
 <style scoped>
