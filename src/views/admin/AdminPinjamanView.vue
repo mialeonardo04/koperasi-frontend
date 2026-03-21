@@ -57,8 +57,8 @@
       <button @click="clearMember">×</button>
     </div>
 
-    <!-- Tabel -->
-    <div class="card" style="padding:0">
+    <!-- Tabel Individu -->
+    <div class="card" v-if="tipeView==='individu'" style="padding:0">
       <div v-if="loading" class="loading-center"><div class="spinner"/></div>
       <div v-else-if="rows.length===0" class="empty-state">
         <Banknote :size="36" style="opacity:0.25"/><p>Tidak ada data pinjaman</p>
@@ -112,6 +112,51 @@
           <button v-for="p in Math.min(page.totalPages,7)" :key="p" class="page-btn" :class="{active:page.number===p-1}" @click="loadPinjaman(p-1)">{{ p }}</button>
           <button class="page-btn" :disabled="page.number>=page.totalPages-1" @click="loadPinjaman(page.number+1)">›</button>
         </div>
+      </div>
+    </div>
+
+    <!-- Tabel Pinjaman Kelompok -->
+    <div class="card" v-if="tipeView==='kelompok'" style="padding:0">
+      <div v-if="loadingKelompok" class="loading-center"><div class="spinner"/></div>
+      <div v-else-if="kelompokRows.length===0" class="empty-state">
+        <Banknote :size="36" style="opacity:0.25"/><p>Tidak ada pinjaman kelompok</p>
+      </div>
+      <div v-else class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>No. Pinjaman</th>
+              <th>Kelompok</th>
+              <th>Pengaju</th>
+              <th>Jumlah</th>
+              <th>Sisa Pool</th>
+              <th>Angsuran/Bln</th>
+              <th>Tenor</th>
+              <th>Status</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="p in kelompokRows" :key="p.id">
+              <td class="mono-text text-sm">{{ p.noPinjaman }}</td>
+              <td>
+                <div class="font-medium">{{ p.namaKelompok }}</div>
+                <div class="text-xs text-muted mono-text">{{ p.kodeKelompok }}</div>
+              </td>
+              <td class="text-sm">{{ p.namaPengaju }}</td>
+              <td class="money font-semibold">{{ formatRupiah(p.jumlahPinjaman) }}</td>
+              <td class="money text-sm" :class="p.sisaPool > 0 ? 'money-negative' : ''">{{ formatRupiah(p.sisaPool) }}</td>
+              <td class="money text-sm">{{ formatRupiah(p.angsuranPerBulan) }}</td>
+              <td class="text-sm">{{ p.tenorBulan }} bln</td>
+              <td><span class="badge" :class="statusBadge(p.status).class">{{ statusBadge(p.status).label }}</span></td>
+              <td>
+                <div class="action-row">
+                  <router-link to="/admin/kelompok" class="btn btn-ghost btn-sm" title="Detail Kelompok"><Eye :size="14"/></router-link>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
@@ -190,12 +235,13 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { Banknote, Eye, X, Search } from 'lucide-vue-next'
-import { adminApi } from '@/services/api'
+import { adminApi, kelompokApi } from '@/services/api'
 import { useApprovalStore } from '@/stores/approval'
 import { formatRupiah, formatDate, statusBadge , parsePage } from '@/services/helpers'
 import { toast } from 'vue3-toastify'
 
 const approvalStore = useApprovalStore()
+const tipeView     = ref('kelompok')
 const rows         = ref([])
 const kelompokRows = ref([])
 const loadingKelompok = ref(false)
@@ -228,6 +274,45 @@ const vClickOutside = {
   unmounted(el) {
     document.removeEventListener('mousedown', el.__clickOutside__)
   }
+}
+
+function switchTab(tab) {
+  tipeView.value = tab
+  if (tab === 'kelompok') loadKelompok()
+}
+
+async function loadKelompok() {
+  loadingKelompok.value = true
+  try {
+    const res = await adminApi.allKelompok({ page: 0, size: 100 })
+    const kelompokList = res.data.data?.content ?? []
+    const all = []
+    for (const k of kelompokList) {
+      if (k.pinjamanAktif) {
+        all.push({
+          ...k.pinjamanAktif,
+          namaKelompok: k.namaKelompok,
+          kodeKelompok: k.kodeKelompok,
+          jumlahAnggota: k.jumlahAnggota,
+          sisaPool: k.pinjamanAktif.sisaPool ?? k.pinjamanAktif.sisaPinjaman
+        })
+      }
+    }
+    // Ambil juga pinjaman yang sudah LUNAS/DITOLAK dari riwayat kelompok
+    for (const k of kelompokList) {
+      if (!k.pinjamanAktif) continue
+    }
+    kelompokRows.value = all
+    pendingKelompok.value = all.filter(p => p.status === 'PENDING').length
+  } catch(e) {
+    console.error('loadKelompok error', e)
+  } finally {
+    loadingKelompok.value = false
+  }
+}
+
+function openProsesKelompok(p) {
+  window.location.href = '/admin/kelompok'
 }
 
 function onSearchInput() {
@@ -318,7 +403,7 @@ async function submitTolak() {
   } finally { submitting.value = false }
 }
 
-onMounted(() => loadPinjaman(0))
+onMounted(() => { loadKelompok(); loadPinjaman(0) })
 </script>
 
 <style scoped>

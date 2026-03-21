@@ -127,16 +127,30 @@
                       <td>
                         <span v-if="a.status==='SUDAH_BAYAR'" class="text-xs text-muted">✓ Lunas</span>
                         <span v-else-if="a.adaPendingBayar" class="badge badge-warning badge-sm">⏳ Menunggu</span>
-                        <div v-else-if="kelompok.pinjamanAktif.status==='DISETUJUI'" style="display:flex;flex-direction:column;gap:6px;min-width:150px">
+                        <div v-else-if="kelompok.pinjamanAktif.status==='DISETUJUI'" style="display:flex;flex-direction:column;gap:6px;min-width:160px">
                           <!-- Pilih metode bayar -->
-                          <select v-model="metodeBayar[a.id]" class="form-input form-select" style="font-size:0.75rem;padding:4px 8px">
+                          <select v-model="metodeBayar[a.id]" class="form-input form-select" style="font-size:0.75rem;padding:4px 8px"
+                            @change="onMetodeBayarChange(a.id)">
                             <option value="TRANSFER">Transfer (Bukti)</option>
                             <option value="SIMPANAN">Dari Saldo Simpanan</option>
                           </select>
-                          <BuktiBayarUploader v-if="metodeBayar[a.id]==='TRANSFER' || !metodeBayar[a.id]" v-model="buktiBayar[a.id]" />
+                          <!-- Upload bukti jika TRANSFER (default) -->
+                          <BuktiBayarUploader v-if="!metodeBayar[a.id] || metodeBayar[a.id]==='TRANSFER'" v-model="buktiBayar[a.id]" />
                           <p class="form-error" v-if="bayarAttempted[a.id] && metodeBayar[a.id]!=='SIMPANAN' && !buktiBayar[a.id]" style="font-size:0.75rem">
                             ⚠️ Upload bukti terlebih dahulu
                           </p>
+                          <!-- Pilih jenis simpanan jika SIMPANAN -->
+                          <div v-if="metodeBayar[a.id]==='SIMPANAN'">
+                            <select v-model="jenisSimpanan[a.id]" class="form-input form-select" style="font-size:0.75rem;padding:4px 8px">
+                              <option value="">Pilih jenis simpanan...</option>
+                              <option value="SUKARELA">Simpanan Sukarela</option>
+                              <option value="WAJIB">Simpanan Wajib</option>
+                              <option value="POKOK">Simpanan Pokok</option>
+                            </select>
+                            <p v-if="bayarAttempted[a.id] && !jenisSimpanan[a.id]" class="form-error" style="font-size:0.75rem">
+                              ⚠️ Pilih jenis simpanan
+                            </p>
+                          </div>
                           <button class="btn btn-primary btn-sm" :disabled="bayarLoading===a.id" @click="ajukanBayar(a)">
                             <span class="spinner" v-if="bayarLoading===a.id" style="width:12px;height:12px"/>
                             <span v-else><Send :size="12"/> Bayar</span>
@@ -381,6 +395,7 @@ const tambahAnggotaForm = ref({ userId: null })
 const pinjamanForm    = ref({ jumlahPinjaman: null, tenorBulan: 6, tujuanPinjaman: '' })
 
 const metodeBayar  = ref({})
+const jenisSimpanan = ref({})
 const buktiBayar   = ref({})
 const bayarLoading = ref(null)
 const bayarAttempted = ref({})
@@ -413,6 +428,12 @@ const estimasiAngsuran = computed(() => {
   const pow = Math.pow(1 + r, n)
   return Math.round(P * r * pow / (pow - 1))
 })
+
+function onMetodeBayarChange(id) {
+  if (metodeBayar.value[id] === 'TRANSFER') {
+    jenisSimpanan.value[id] = ''
+  }
+}
 
 function initials(name) {
   return (name || '').split(' ').slice(0,2).map(n=>n[0]).join('').toUpperCase()
@@ -487,13 +508,16 @@ async function ajukanBayar(a) {
   bayarAttempted.value = { ...bayarAttempted.value, [a.id]: true }
   const metode = metodeBayar.value[a.id] || 'TRANSFER'
   if (metode === 'TRANSFER' && !buktiBayar.value[a.id]) return
+  if (metode === 'SIMPANAN' && !jenisSimpanan.value[a.id]) return
 
   bayarLoading.value = a.id
   try {
     await kelompokApi.bayarAngsuran({
-      angsuranId:   a.id,
-      metodeBayar:  metode,
-      buktiBayar:   buktiBayar.value[a.id] || null,
+      angsuranId:    a.id,
+      metodeBayar:   metode,
+      buktiBayar:    buktiBayar.value[a.id] || null,
+      jenisSimpanan: metode === 'SIMPANAN' ? jenisSimpanan.value[a.id] : null,
+      keterangan:    metode === 'SIMPANAN' ? 'Bayar dari simpanan ' + jenisSimpanan.value[a.id] : null
     })
     toast.success(`Pengajuan bayar angsuran ke-${a.periodeKe} dikirim!`)
     bayarAttempted.value = { ...bayarAttempted.value, [a.id]: false }

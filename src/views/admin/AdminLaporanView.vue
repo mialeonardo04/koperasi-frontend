@@ -14,8 +14,8 @@
     <!-- ===== FILTER BAR ===== -->
     <div class="filter-bar card card-sm">
       <div class="filter-row">
-        <!-- Filter Member -->
-        <div class="filter-group">
+        <!-- Filter Member (hanya simpanan) -->
+        <div class="filter-group" v-if="tab==='simpanan'">
           <label class="filter-label">Filter Anggota</label>
           <select v-model="filterMemberId" class="form-input form-select filter-select" @change="applyFilter">
             <option value="">Semua Anggota</option>
@@ -43,23 +43,29 @@
           </div>
         </template>
 
-        <!-- Filter Status (hanya pinjaman) -->
+        <!-- Filter Pinjaman Kelompok -->
         <template v-if="tab==='pinjaman'">
           <div class="filter-group">
-            <label class="filter-label">Status Pinjaman</label>
-            <select v-model="filterStatus" class="form-input form-select filter-select" @change="applyFilter">
-              <option value="">Semua Status</option>
-              <option value="PENDING">Menunggu</option>
-              <option value="DISETUJUI">Disetujui</option>
-              <option value="LUNAS">Lunas</option>
-              <option value="DITOLAK">Ditolak</option>
-              <option value="MACET">Macet</option>
+            <label class="filter-label">Nama Kelompok</label>
+            <select v-model="filterKelompokId" class="form-input form-select filter-select" @change="applyFilter">
+              <option value="">Semua Kelompok</option>
+              <option v-for="k in kelompokOptions" :key="k.id" :value="k.id">{{ k.namaKelompok }}</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">Nama Anggota</label>
+            <select v-model="filterAnggotaKelompok" class="form-input form-select filter-select" @change="applyFilter">
+              <option value="">Semua Anggota</option>
+              <option v-for="m in anggotaOptions" :key="m.id" :value="m.id">{{ m.namaLengkap }}</option>
             </select>
           </div>
         </template>
 
         <!-- Tombol Reset + Export -->
         <div class="filter-actions">
+          <button class="btn btn-primary btn-sm" @click="applyFilter">
+            Terapkan Filter
+          </button>
           <button class="btn btn-ghost btn-sm" @click="resetFilter">
             <RotateCcw :size="14" /> Reset
           </button>
@@ -159,63 +165,72 @@
       </div>
     </div>
 
-    <!-- ===== REKAP PINJAMAN ===== -->
+    <!-- ===== REKAP PINJAMAN KELOMPOK ===== -->
     <div v-if="tab==='pinjaman'">
       <div class="laporan-header">
         <div>
-          <h4>Rekap Pinjaman</h4>
-          <p class="text-sm text-muted">{{ filteredPinjaman.length }} pinjaman</p>
+          <h4>Rekap Pinjaman Kelompok (Disetujui)</h4>
+          <p class="text-sm text-muted">{{ filteredPinjamanKelompok.length }} pinjaman</p>
         </div>
         <div class="laporan-total-row">
           <div class="laporan-total-item">
             <span class="text-xs text-muted">Total Dipinjam</span>
-            <span class="money font-semibold">{{ formatRupiah(totalDipinjam) }}</span>
+            <span class="money font-semibold">{{ formatRupiah(totalDipinjamKelompok) }}</span>
           </div>
           <div class="laporan-total-item">
-            <span class="text-xs text-muted">Total Terbayar</span>
-            <span class="money font-semibold" style="color:var(--clr-success)">{{ formatRupiah(totalTerbayar) }}</span>
+            <span class="text-xs text-muted">Total Tercairkan</span>
+            <span class="money font-semibold" style="color:var(--clr-success)">{{ formatRupiah(totalTercairkan) }}</span>
           </div>
           <div class="laporan-total-item highlight">
-            <span class="text-xs">Total Sisa</span>
-            <span class="money font-semibold" style="color:var(--clr-danger)">{{ formatRupiah(totalSisaPinjaman) }}</span>
+            <span class="text-xs">Sisa Pool</span>
+            <span class="money font-semibold" style="color:var(--clr-danger)">{{ formatRupiah(totalSisaPool) }}</span>
           </div>
         </div>
       </div>
 
       <div class="card" style="padding:0">
-        <div v-if="loadingPinjaman" class="loading-center"><div class="spinner"/></div>
-        <div v-else-if="filteredPinjaman.length===0" class="empty-state"><p>Belum ada data</p></div>
+        <div v-if="loadingPinjamanKelompok" class="loading-center"><div class="spinner"/></div>
+        <div v-else-if="filteredPinjamanKelompok.length===0" class="empty-state"><p>Belum ada data pinjaman kelompok yang disetujui</p></div>
         <div v-else class="table-wrap">
           <table>
             <thead>
               <tr>
                 <th>No</th>
-                <th>No. Anggota</th>
-                <th>Nama</th>
+                <th>Kelompok</th>
+                <th>Pengaju</th>
                 <th>No. Pinjaman</th>
                 <th>Jumlah</th>
-                <th>Sudah Dibayar</th>
-                <th>Sisa</th>
+                <th>Total Tercairkan</th>
+                <th>Sisa Pool</th>
+                <th>Angsuran/Bln</th>
+                <th>Tenor</th>
+                <th>Jatuh Tempo</th>
                 <th>Status</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(r, i) in filteredPinjaman" :key="r.noPinjaman">
+              <tr v-for="(r, i) in filteredPinjamanKelompok" :key="r.noPinjaman">
                 <td class="text-muted text-sm">{{ i+1 }}</td>
-                <td><span class="mono-text">{{ r.nomorAnggota }}</span></td>
-                <td class="font-medium">{{ r.namaAnggota }}</td>
-                <td><span class="mono-text">{{ r.noPinjaman }}</span></td>
+                <td>
+                  <div class="font-medium">{{ r.namaKelompok }}</div>
+                  <div class="mono-text text-xs text-muted">{{ r.kodeKelompok }}</div>
+                </td>
+                <td class="text-sm">{{ r.namaPengaju }}</td>
+                <td><span class="mono-text text-sm">{{ r.noPinjaman }}</span></td>
                 <td class="money">{{ formatRupiah(r.jumlahPinjaman) }}</td>
-                <td class="money money-positive">{{ formatRupiah(r.sudahDibayar) }}</td>
-                <td class="money money-negative">{{ formatRupiah(r.sisaPinjaman) }}</td>
+                <td class="money money-positive">{{ formatRupiah(r.totalTercairkan) }}</td>
+                <td class="money money-negative">{{ formatRupiah(r.sisaPool) }}</td>
+                <td class="money">{{ formatRupiah(r.angsuranPerBulan) }}</td>
+                <td class="text-sm">{{ r.tenorBulan }} bln</td>
+                <td class="text-sm">{{ formatDate(r.tanggalJatuhTempo) || '-' }}</td>
                 <td><span class="badge" :class="statusBadge(r.status).class">{{ statusBadge(r.status).label }}</span></td>
               </tr>
               <tr class="total-row">
                 <td colspan="4" class="font-semibold">TOTAL</td>
-                <td class="money font-semibold">{{ formatRupiah(totalDipinjam) }}</td>
-                <td class="money font-semibold" style="color:var(--clr-success)">{{ formatRupiah(totalTerbayar) }}</td>
-                <td class="money font-semibold" style="color:var(--clr-danger)">{{ formatRupiah(totalSisaPinjaman) }}</td>
-                <td></td>
+                <td class="money font-semibold">{{ formatRupiah(totalDipinjamKelompok) }}</td>
+                <td class="money font-semibold" style="color:var(--clr-success)">{{ formatRupiah(totalTercairkan) }}</td>
+                <td class="money font-semibold" style="color:var(--clr-danger)">{{ formatRupiah(totalSisaPool) }}</td>
+                <td colspan="4"></td>
               </tr>
             </tbody>
           </table>
@@ -231,7 +246,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { Wallet, Banknote, FileSpreadsheet, RotateCcw } from 'lucide-vue-next'
 import * as XLSX from 'xlsx'
 import { adminApi } from '@/services/api'
-import { formatRupiah, statusBadge , parsePage } from '@/services/helpers'
+import { formatRupiah, formatDate, statusBadge, parsePage } from '@/services/helpers'
 import { toast } from 'vue3-toastify'
 
 // ─── State ───────────────────────────────────────────────
@@ -244,10 +259,15 @@ const loadingPinjaman = ref(false)
 const exporting       = ref(false)
 
 // Filter state
-const filterMemberId = ref('')
-const filterBulan    = ref('')
-const filterTahun    = ref(new Date().getFullYear().toString())
-const filterStatus   = ref('')
+const filterMemberId   = ref('')
+const filterBulan      = ref('')
+const filterTahun      = ref(new Date().getFullYear().toString())
+const filterStatus     = ref('')
+const filterKelompokId = ref('')
+const rekapPinjamanKelompok = ref([])
+const loadingPinjamanKelompok = ref(false)
+const filterAnggotaKelompok = ref('')
+const kelompokAnggotaMap = ref({}) // { kelompokId: [{id, namaLengkap}] }
 
 // ─── Options ─────────────────────────────────────────────
 const bulanOptions = [
@@ -309,14 +329,52 @@ const totalDipinjam     = computed(() => filteredPinjaman.value.reduce((s,r) => 
 const totalTerbayar     = computed(() => filteredPinjaman.value.reduce((s,r) => s + (r.sudahDibayar||0), 0))
 const totalSisaPinjaman = computed(() => filteredPinjaman.value.reduce((s,r) => s + (r.sisaPinjaman||0), 0))
 
+const kelompokOptions = computed(() => {
+  const seen = new Set()
+  return rekapPinjamanKelompok.value
+    .filter(r => { if (seen.has(r.kelompokId)) return false; seen.add(r.kelompokId); return true })
+    .map(r => ({ id: r.kelompokId, namaKelompok: r.namaKelompok }))
+})
+
+const anggotaOptions = computed(() => {
+  if (!filterKelompokId.value) {
+    // Gabungkan semua anggota dari semua kelompok
+    const seen = new Set()
+    return Object.values(kelompokAnggotaMap.value).flat()
+      .filter(a => { if (seen.has(a.id)) return false; seen.add(a.id); return true })
+  }
+  return kelompokAnggotaMap.value[filterKelompokId.value] ?? []
+})
+
+const filteredPinjamanKelompok = computed(() => {
+  let data = rekapPinjamanKelompok.value
+  if (filterKelompokId.value) data = data.filter(r => r.kelompokId == filterKelompokId.value)
+  if (filterAnggotaKelompok.value) {
+    // Filter kelompok yang anggotanya mengandung user yang dipilih
+    data = data.filter(r => {
+      const anggota = kelompokAnggotaMap.value[r.kelompokId] ?? []
+      return anggota.some(a => a.id == filterAnggotaKelompok.value)
+    })
+  }
+  return data
+})
+
+const totalDipinjamKelompok = computed(() => filteredPinjamanKelompok.value.reduce((s,r) => s + (Number(r.jumlahPinjaman)||0), 0))
+const totalTercairkan = computed(() => filteredPinjamanKelompok.value.reduce((s,r) => s + (Number(r.totalTercairkan)||0), 0))
+const totalSisaPool   = computed(() => filteredPinjamanKelompok.value.reduce((s,r) => s + (Number(r.sisaPool)||0), 0))
+
 // ─── Helpers ──────────────────────────────────────────────
-function applyFilter() { /* filter reaktif via computed */ }
+function applyFilter() {
+  if (tab.value === 'simpanan') loadRekapSimpanan()
+}
 
 function resetFilter() {
   filterMemberId.value = ''
   filterBulan.value    = ''
   filterTahun.value    = new Date().getFullYear().toString()
-  filterStatus.value   = ''
+  filterStatus.value      = ''
+  filterKelompokId.value  = ''
+  filterAnggotaKelompok.value = ''
 }
 
 function buildFilterLabel() {
@@ -480,10 +538,52 @@ async function loadMembers() {
 async function loadRekapSimpanan() {
   loadingSimpanan.value = true
   try {
-    const res = await adminApi.rekapSimpanan()
+    const params = {}
+    if (filterBulan.value) params.bulan = parseInt(filterBulan.value)
+    if (filterTahun.value) params.tahun = parseInt(filterTahun.value)
+    const res = await adminApi.rekapSimpanan(params)
     rekapSimpanan.value = res.data.data
   } finally {
     loadingSimpanan.value = false
+  }
+}
+
+async function loadRekapPinjamanKelompok() {
+  loadingPinjamanKelompok.value = true
+  try {
+    const res = await adminApi.allKelompok({ page: 0, size: 100 })
+    const parsed = parsePage(res.data.data)
+    const kelompokList = parsed.content ?? []
+    const all = []
+    const anggotaMap = {}
+
+    for (const k of kelompokList) {
+      if (k.pinjamanAktif && k.pinjamanAktif.status === 'DISETUJUI') {
+        all.push({
+          ...k.pinjamanAktif,
+          namaKelompok: k.namaKelompok,
+          kodeKelompok: k.kodeKelompok,
+          kelompokId: k.id,
+        })
+
+        // Fetch detail kelompok untuk dapat anggotaList
+        try {
+          const detailRes = await adminApi.kelompokDetail(k.id)
+          const detail = detailRes.data.data
+          anggotaMap[k.id] = (detail.anggotaList ?? []).map(a => ({
+            id: a.id,
+            namaLengkap: a.namaLengkap,
+            nomorAnggota: a.nomorAnggota
+          }))
+        } catch {
+          anggotaMap[k.id] = [{ id: k.pinjamanAktif.pengajuId, namaLengkap: k.pinjamanAktif.namaPengaju }]
+        }
+      }
+    }
+    rekapPinjamanKelompok.value = all
+    kelompokAnggotaMap.value = anggotaMap
+  } finally {
+    loadingPinjamanKelompok.value = false
   }
 }
 
@@ -499,7 +599,7 @@ async function loadRekapPinjaman() {
 
 watch(tab, t => {
   if (t === 'simpanan' && rekapSimpanan.value.length === 0) loadRekapSimpanan()
-  if (t === 'pinjaman' && rekapPinjaman.value.length === 0) loadRekapPinjaman()
+  if (t === 'pinjaman') { loadRekapPinjaman(); loadRekapPinjamanKelompok() }
   // Reset filter saat ganti tab
   filterStatus.value = ''
   filterBulan.value  = ''

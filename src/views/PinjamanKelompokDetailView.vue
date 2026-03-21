@@ -100,11 +100,23 @@
                     <span v-if="a.status==='SUDAH_BAYAR'" class="text-xs text-muted">✓ Lunas</span>
                     <span v-else-if="a.adaPendingBayar" class="badge badge-warning badge-sm">⏳ Menunggu</span>
                     <div v-else-if="pinjaman.status==='DISETUJUI'" style="display:flex;flex-direction:column;gap:6px;min-width:160px">
-                      <select v-model="metodeBayar[a.id]" class="form-input form-select" style="font-size:0.75rem;padding:4px 8px">
-                        <option value="TRANSFER">Transfer (Bukti)</option>
+                      <select v-model="metodeBayar[a.id]" class="form-input form-select" style="font-size:0.75rem;padding:4px 8px"
+                        @change="onMetodeBayarChange(a.id)">
+                        <option value="TRANSFER" selected>Transfer (Bukti)</option>
                         <option value="SIMPANAN">Dari Saldo Simpanan</option>
                       </select>
-                      <BuktiBayarUploader v-if="(metodeBayar[a.id]||'TRANSFER')==='TRANSFER'" v-model="buktiBayar[a.id]" />
+                      <!-- Upload bukti jika TRANSFER -->
+                      <BuktiBayarUploader v-if="!metodeBayar[a.id] || metodeBayar[a.id]==='TRANSFER'" v-model="buktiBayar[a.id]" />
+                      <!-- Pilih jenis simpanan jika SIMPANAN -->
+                      <div v-if="metodeBayar[a.id]==='SIMPANAN'">
+                        <select v-model="jenisSimpanan[a.id]" class="form-input form-select" style="font-size:0.75rem;padding:4px 8px" required>
+                          <option value="">Pilih jenis simpanan...</option>
+                          <option value="SUKARELA">Simpanan Sukarela</option>
+                          <option value="WAJIB">Simpanan Wajib</option>
+                          <option value="POKOK">Simpanan Pokok</option>
+                        </select>
+                        <p v-if="!jenisSimpanan[a.id]" class="text-xs" style="color:var(--clr-danger);margin-top:3px">Pilih jenis simpanan</p>
+                      </div>
                       <button class="btn btn-primary btn-sm" :disabled="bayarLoading===a.id" @click="ajukanBayar(a)">
                         <span class="spinner" v-if="bayarLoading===a.id" style="width:12px;height:12px"/>
                         <span v-else>Bayar Angsuran</span>
@@ -230,6 +242,7 @@ const tab      = ref('angsuran')
 
 const metodeBayar   = ref({})
 const buktiBayar    = ref({})
+const jenisSimpanan = ref({})
 const bayarLoading  = ref(null)
 
 const pencairanForm    = ref({ jumlah: null, catatan: '' })
@@ -247,6 +260,12 @@ const progressPersen = computed(() => {
     (Number(pinjaman.value.totalSudahDibayar) / Number(pinjaman.value.jumlahPinjaman)) * 100
   ))
 })
+
+function onMetodeBayarChange(id) {
+  if (metodeBayar.value[id] === 'TRANSFER') {
+    jenisSimpanan.value[id] = ''
+  }
+}
 
 function statusAngsuranClass(s) {
   return { BELUM_BAYAR:'badge-warning', SUDAH_BAYAR:'badge-success', TERLAMBAT:'badge-danger' }[s] || ''
@@ -297,11 +316,17 @@ async function ajukanBayar(a) {
   if (metode === 'TRANSFER' && !buktiBayar.value[a.id]) {
     toast.error('Upload bukti transfer terlebih dahulu'); return
   }
+  if (metode === 'SIMPANAN' && !jenisSimpanan.value[a.id]) {
+    toast.error('Pilih jenis simpanan terlebih dahulu'); return
+  }
   bayarLoading.value = a.id
   try {
     await kelompokApi.bayarAngsuran({
-      angsuranId: a.id, metodeBayar: metode,
-      buktiBayar: buktiBayar.value[a.id] || null
+      angsuranId:    a.id,
+      metodeBayar:   metode,
+      buktiBayar:    buktiBayar.value[a.id] || null,
+      jenisSimpanan: metode === 'SIMPANAN' ? jenisSimpanan.value[a.id] : null,
+      keterangan:    metode === 'SIMPANAN' ? 'Bayar dari simpanan ' + jenisSimpanan.value[a.id] : null
     })
     toast.success(`Pengajuan bayar angsuran ke-${a.periodeKe} dikirim!`)
     await load()
