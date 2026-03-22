@@ -75,7 +75,7 @@
           </button>
         </form>
 
-        <div class="demo-accounts">
+        <!-- <div class="demo-accounts">
           <p class="demo-title">Akun Demo</p>
           <div class="demo-grid">
             <button class="demo-btn" @click="fillDemo('admin@koperasi.id', 'admin123')">
@@ -85,7 +85,7 @@
               <User :size="14" /> Member
             </button>
           </div>
-        </div>
+        </div> -->
       </div>
     </div>
   </div>
