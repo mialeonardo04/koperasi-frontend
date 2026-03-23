@@ -142,6 +142,11 @@
                 <p class="text-xs text-muted" v-if="p.catatanAdmin" style="margin-top:3px">
                   📝 {{ p.catatanAdmin }}
                 </p>
+                <button v-if="p.status === 'DISETUJUI'"
+                  class="btn-slip" @click="downloadSlip(p.id)" :disabled="downloadingSlip===p.id">
+                  <span v-if="downloadingSlip===p.id" class="spinner" style="width:10px;height:10px;border-width:2px"/>
+                  <span v-else>📄 Download Slip</span>
+                </button>
               </div>
             </div>
           </div>
@@ -266,7 +271,7 @@ async function loadRiwayat(p = 0) {
 async function loadPengajuan() {
   loadingPengajuan.value = true
   try {
-    const res = await pengajuanApi.riwayat({ page: 0, size: 30, sort: 'createdAt,desc' })
+    const res = await pengajuanApi.riwayat({ page: 0, size: 100, sort: 'createdAt,desc' })
     pengajuanList.value = parsePage(res.data.data).content
   } finally { loadingPengajuan.value = false }
 }
@@ -277,6 +282,20 @@ function resetForm() {
 }
 
 function changePage(p) { loadRiwayat(p) }
+
+const downloadingSlip = ref(null)
+
+async function downloadSlip(transaksiId) {
+  downloadingSlip.value = transaksiId
+  try {
+    const res = await slipApi.slipSetoran(transaksiId)
+    downloadPdf(res.data, `slip-setoran-${transaksiId}.pdf`)
+  } catch(e) {
+    toast.error('Gagal download slip')
+  } finally {
+    downloadingSlip.value = null
+  }
+}
 
 async function submitPengajuan(jenis) {
   submitAttempted.value = true
@@ -347,6 +366,9 @@ onMounted(() => { loadSaldo(); loadRiwayat(); loadPengajuan() })
 .icon-angsuran { background:var(--clr-info-bg);    color:var(--clr-info); }
 .pengajuan-info { flex:1; min-width:0; }
 .pengajuan-top  { display:flex; justify-content:space-between; align-items:center; }
+.btn-slip { background: none; border: 1px solid var(--clr-primary); color: var(--clr-primary); border-radius: var(--radius-md); padding: 3px 10px; font-size: 0.72rem; cursor: pointer; margin-top: 5px; display: inline-flex; align-items: center; gap: 4px; transition: all var(--transition); }
+.btn-slip:hover { background: var(--clr-primary); color: #fff; }
+.btn-slip:disabled { opacity: 0.5; cursor: not-allowed; }
 .pengajuan-label { font-size:0.875rem; font-weight:500; }
 .pengajuan-bottom { display:flex; justify-content:space-between; align-items:center; margin-top:2px; }
 /* Riwayat list */

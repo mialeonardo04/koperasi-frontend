@@ -4,7 +4,9 @@ dayjs.locale('id')
 
 export function formatRupiah(val) {
   if (val === null || val === undefined) return 'Rp 0'
-  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val)
+  // Format: Rp 1.000.000 (titik sebagai pemisah ribuan, tanpa desimal)
+  const num = Math.round(Number(val))
+  return 'Rp ' + num.toLocaleString('id-ID')
 }
 
 export function formatDate(val, fmt = 'DD MMM YYYY') {
@@ -63,4 +65,18 @@ export function parsePage(data) {
     number:        pg.number          ?? 0,
     size:          pg.size            ?? 10,
   }
+}
+
+/**
+ * Download PDF blob dari response API
+ */
+export function downloadPdf(blob, filename) {
+  const url = window.URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }))
+  const a   = document.createElement('a')
+  a.href    = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  window.URL.revokeObjectURL(url)
+  document.body.removeChild(a)
 }

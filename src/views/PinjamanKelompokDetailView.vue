@@ -97,7 +97,14 @@
                   </td>
                   <td class="text-sm">{{ a.dibayarOleh || '-' }}</td>
                   <td>
-                    <span v-if="a.status==='SUDAH_BAYAR'" class="text-xs text-muted">✓ Lunas</span>
+                    <div v-if="a.status==='SUDAH_BAYAR'" style="display:flex;flex-direction:column;gap:4px;align-items:flex-start">
+                      <span class="text-xs text-muted">✓ Lunas</span>
+                      <button class="btn btn-info btn-sm" @click="downloadSlipAngsuran(a.id)" :disabled="downloadingSlip===a.id">
+                        <span v-if="downloadingSlip===a.id" class="spinner" style="width:10px;height:10px;border-width:2px"/>
+                        <span v-else>📄 Download Slip</span>
+                      </button>
+                      
+                    </div>
                     <span v-else-if="a.adaPendingBayar" class="badge badge-warning badge-sm">⏳ Menunggu</span>
                     <div v-else-if="pinjaman.status==='DISETUJUI'" style="display:flex;flex-direction:column;gap:6px;min-width:160px">
                       <select v-model="metodeBayar[a.id]" class="form-input form-select" style="font-size:0.75rem;padding:4px 8px"
@@ -227,7 +234,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { kelompokApi } from '@/services/api'
+import { kelompokApi, slipApi } from '@/services/api'
+import { downloadPdf } from '@/services/helpers'
 import { formatRupiah, formatDate, formatDateTime, statusBadge } from '@/services/helpers'
 import { useAuthStore } from '@/stores/auth'
 import { toast } from 'vue3-toastify'
@@ -243,7 +251,8 @@ const tab      = ref('angsuran')
 const metodeBayar   = ref({})
 const buktiBayar    = ref({})
 const jenisSimpanan = ref({})
-const bayarLoading  = ref(null)
+const bayarLoading     = ref(null)
+const downloadingSlip  = ref(null)
 
 const pencairanForm    = ref({ jumlah: null, catatan: '' })
 const pencairanLoading = ref(false)
@@ -260,6 +269,18 @@ const progressPersen = computed(() => {
     (Number(pinjaman.value.totalSudahDibayar) / Number(pinjaman.value.jumlahPinjaman)) * 100
   ))
 })
+
+async function downloadSlipAngsuran(angsuranId) {
+  downloadingSlip.value = angsuranId
+  try {
+    const res = await slipApi.slipAngsuran(angsuranId)
+    downloadPdf(res.data, `slip-angsuran-${angsuranId}.pdf`)
+  } catch(e) {
+    toast.error('Gagal download slip')
+  } finally {
+    downloadingSlip.value = null
+  }
+}
 
 function onMetodeBayarChange(id) {
   if (metodeBayar.value[id] === 'TRANSFER') {

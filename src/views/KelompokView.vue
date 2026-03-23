@@ -125,7 +125,13 @@
                       </td>
                       <td class="text-sm">{{ a.dibayarOleh || '-' }}</td>
                       <td>
-                        <span v-if="a.status==='SUDAH_BAYAR'" class="text-xs text-muted">✓ Lunas</span>
+                        <div v-if="a.status==='SUDAH_BAYAR'" style="display:flex;flex-direction:column;gap:4px;align-items:flex-start">
+                          <span class="text-xs text-muted">✓ Lunas</span>
+                          <button class="btn-slip-sm" @click="downloadSlipAngsuran(a.id)" :disabled="downloadingSlip===a.id">
+                            <span v-if="downloadingSlip===a.id" class="spinner" style="width:10px;height:10px;border-width:2px"/>
+                            <span v-else>📄 Slip</span>
+                          </button>
+                        </div>
                         <span v-else-if="a.adaPendingBayar" class="badge badge-warning badge-sm">⏳ Menunggu</span>
                         <div v-else-if="kelompok.pinjamanAktif.status==='DISETUJUI'" style="display:flex;flex-direction:column;gap:6px;min-width:160px">
                           <!-- Pilih metode bayar -->
@@ -364,7 +370,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { Users, Plus, UserPlus, Banknote, Send, X, Search } from 'lucide-vue-next'
-import { kelompokApi } from '@/services/api'
+import { kelompokApi, slipApi } from '@/services/api'
+import { downloadPdf } from '@/services/helpers'
 import { formatRupiah, formatDate, formatDateTime, statusBadge } from '@/services/helpers'
 import { useAuthStore } from '@/stores/auth'
 import { toast } from 'vue3-toastify'

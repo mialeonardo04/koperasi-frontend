@@ -171,4 +171,10 @@ export const adminApi = {
   rekapPinjaman: ()              => api.get('/admin/report/rekap-pinjaman'),
 }
 
+export const slipApi = {
+  slipSetoran:    (transaksiId) => api.get(`/slip/setoran/${transaksiId}`,    { responseType: 'blob' }),
+  slipAngsuran:   (angsuranId)  => api.get(`/slip/angsuran/${angsuranId}`,    { responseType: 'blob' }),
+  kartuSimpanan:  ()            => api.get('/slip/kartu-simpanan',             { responseType: 'blob' }),
+}
+
 export default api

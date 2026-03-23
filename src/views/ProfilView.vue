@@ -43,18 +43,47 @@
         </form>
       </div>
     </div>
+
+    <!-- Kartu Simpanan -->
+    <div class="card" style="margin-top:1.25rem">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <h4 style="margin:0 0 4px 0">Kartu Simpanan</h4>
+          <p class="text-sm text-muted">Download rekap saldo simpanan kamu dalam format PDF</p>
+        </div>
+        <button class="btn btn-primary btn-sm" @click="downloadKartuSimpanan" :disabled="downloadingKartu">
+          <span v-if="downloadingKartu" class="spinner" style="width:12px;height:12px;border-width:2px"/>
+          <span v-else>📄 Download PDF</span>
+        </button>
+      </div>
+    </div>
+
   </div>
 </template>
 
 <script setup>
+import { slipApi, authApi } from '@/services/api'
+import { downloadPdf, formatRupiah } from '@/services/helpers'
 import { ref, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import { authApi } from '@/services/api'
-import { formatRupiah } from '@/services/helpers'
 import { toast } from 'vue3-toastify'
 
 const auth = useAuthStore()
 const user = computed(() => auth.user)
+
+const downloadingKartu = ref(false)
+
+async function downloadKartuSimpanan() {
+  downloadingKartu.value = true
+  try {
+    const res = await slipApi.kartuSimpanan()
+    downloadPdf(res.data, 'kartu-simpanan.pdf')
+  } catch(e) {
+    toast.error('Gagal download kartu simpanan')
+  } finally {
+    downloadingKartu.value = false
+  }
+}
 
 const initials = computed(() => {
   return (user.value?.namaLengkap || '').split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
