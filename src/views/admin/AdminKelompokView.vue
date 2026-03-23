@@ -1,5 +1,13 @@
 <template>
   <div class="admin-kelompok">
+    <!-- Header Aksi -->
+    <div class="card" style="margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap">
+      <h4 style="margin:0">Manajemen Kelompok</h4>
+      <button class="btn btn-primary btn-sm" @click="openBuatKelompok">
+        <Plus :size="14"/> Buat Kelompok
+      </button>
+    </div>
+
     <!-- Tabel kelompok -->
     <div class="card" style="padding:0">
       <div v-if="loading" class="loading-center"><div class="spinner"/></div>
@@ -40,6 +48,9 @@
                   <button class="btn btn-ghost btn-sm" @click="openDetail(r)" title="Detail"><Eye :size="14"/></button>
                   <button v-if="r.pinjamanAktif?.status==='PENDING'" class="btn btn-primary btn-sm" @click="openProsesPinjaman(r)">Proses</button>
                   <button v-if="r.status==='AKTIF'" class="btn btn-warning btn-sm" @click="openTeguran(r)">Teguran</button>
+                  <button v-if="r.status==='AKTIF'" class="btn btn-ghost btn-sm" @click="openGantiLeader(r)" title="Ganti Leader"><UserCheck :size="14"/></button>
+                  <button v-if="r.status==='AKTIF'" class="btn btn-ghost btn-sm" @click="openTambahAnggota(r)" title="Tambah Anggota"><UserPlus :size="14"/></button>
+                  <button v-if="r.status==='AKTIF'" class="btn btn-ghost btn-sm" @click="openPencairan(r)" title="Kelola Pencairan"><Wallet :size="14"/></button>
                 </div>
               </td>
             </tr>
@@ -158,13 +169,169 @@
         </div>
       </div>
     </Teleport>
-  </div>
+
+    <!-- Modal Buat Kelompok (Admin) -->
+    <Teleport to="body">
+      <div class="modal-overlay" v-if="showBuatKelompok" @click.self="showBuatKelompok=false">
+        <div class="modal" style="max-width:480px">
+          <div class="modal-header">
+            <h3>Buat Kelompok Baru</h3>
+            <button class="btn-icon-close" @click="showBuatKelompok=false"><X :size="18"/></button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label class="form-label">Nama Kelompok <span class="text-danger">*</span></label>
+              <input v-model="formBuat.namaKelompok" class="form-input" placeholder="Contoh: Kelompok Mawar" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Leader (Member) <span class="text-danger">*</span></label>
+              <select v-model="formBuat.leaderId" class="form-input">
+                <option value="" disabled>-- Pilih Leader --</option>
+                <option v-for="m in memberBebas" :key="m.id" :value="m.id">
+                  {{ m.namaLengkap }} ({{ m.nomorAnggota }})
+                </option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Deskripsi</label>
+              <input v-model="formBuat.deskripsi" class="form-input" placeholder="Opsional" />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-ghost" @click="showBuatKelompok=false">Batal</button>
+            <button class="btn btn-primary" @click="submitBuatKelompok" :disabled="submitLoading">
+              <span v-if="submitLoading" class="spinner" style="width:12px;height:12px;border-width:2px"/>
+              <span v-else>Buat Kelompok</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Modal Ganti Leader -->
+    <Teleport to="body">
+      <div class="modal-overlay" v-if="showGantiLeader" @click.self="showGantiLeader=false">
+        <div class="modal" style="max-width:420px">
+          <div class="modal-header">
+            <h3>Ganti Leader — {{ selectedKelompok?.namaKelompok }}</h3>
+            <button class="btn-icon-close" @click="showGantiLeader=false"><X :size="18"/></button>
+          </div>
+          <div class="modal-body">
+            <p class="text-sm text-muted" style="margin-bottom:1rem">
+              Leader saat ini: <strong>{{ selectedKelompok?.namaLeader }}</strong>
+            </p>
+            <div class="form-group">
+              <label class="form-label">Pilih Leader Baru <span class="text-danger">*</span></label>
+              <select v-model="formGantiLeader.newLeaderId" class="form-input">
+                <option value="" disabled>-- Pilih Anggota --</option>
+                <option v-for="a in anggotaKelompok" :key="a.id" :value="a.id">
+                  {{ a.namaLengkap }} {{ a.isLeader ? '(Leader Saat Ini)' : '' }}
+                </option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-ghost" @click="showGantiLeader=false">Batal</button>
+            <button class="btn btn-primary" @click="submitGantiLeader" :disabled="submitLoading">
+              <span v-if="submitLoading" class="spinner" style="width:12px;height:12px;border-width:2px"/>
+              <span v-else>Simpan</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Modal Tambah Anggota (Admin) -->
+    <Teleport to="body">
+      <div class="modal-overlay" v-if="showTambahAnggota" @click.self="showTambahAnggota=false">
+        <div class="modal" style="max-width:520px">
+          <div class="modal-header">
+            <h3>Tambah Anggota — {{ selectedKelompok?.namaKelompok }}</h3>
+            <button class="btn-icon-close" @click="showTambahAnggota=false"><X :size="18"/></button>
+          </div>
+          <div class="modal-body">
+            <p class="text-sm text-muted" style="margin-bottom:0.75rem">
+              Pilih member yang akan ditambahkan ke kelompok ini.
+            </p>
+            <div class="member-table-wrap" style="max-height:280px;overflow-y:auto">
+              <table>
+                <thead><tr><th></th><th>No. Anggota</th><th>Nama</th></tr></thead>
+                <tbody>
+                  <tr v-for="m in memberBebas" :key="m.id">
+                    <td><input type="checkbox" :value="m.id" v-model="formTambahAnggota.userIds" /></td>
+                    <td class="mono-text text-sm">{{ m.nomorAnggota }}</td>
+                    <td class="text-sm">{{ m.namaLengkap }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p v-if="memberBebas.length===0" class="text-sm text-muted text-center" style="padding:1rem">
+              Tidak ada member bebas kelompok
+            </p>
+          </div>
+          <div class="modal-footer">
+            <span class="text-sm text-muted">{{ formTambahAnggota.userIds.length }} dipilih</span>
+            <button class="btn btn-ghost" @click="showTambahAnggota=false">Batal</button>
+            <button class="btn btn-primary" @click="submitTambahAnggota" :disabled="submitLoading||formTambahAnggota.userIds.length===0">
+              <span v-if="submitLoading" class="spinner" style="width:12px;height:12px;border-width:2px"/>
+              <span v-else>Tambah</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+
+    <!-- Modal Kelola Pencairan (Admin) -->
+    <Teleport to="body">
+      <div class="modal-overlay" v-if="showPencairan" @click.self="showPencairan=false">
+        <div class="modal" style="max-width:560px">
+          <div class="modal-header">
+            <h3>Pencairan Dana — {{ selectedKelompok?.namaKelompok }}</h3>
+            <button class="btn-icon-close" @click="showPencairan=false"><X :size="18"/></button>
+          </div>
+          <div class="modal-body">
+            <div v-if="loadingPencairan" class="loading-center"><div class="spinner"/></div>
+            <div v-else-if="pencairanPendingList.length === 0" class="empty-state" style="padding:1.5rem">
+              <p class="text-muted">Tidak ada request pencairan yang menunggu persetujuan</p>
+            </div>
+            <div v-else>
+              <p class="text-sm text-muted" style="margin-bottom:1rem">
+                {{ pencairanPendingList.length }} request pencairan menunggu persetujuan
+              </p>
+              <div v-for="p in pencairanPendingList" :key="p.id" class="pencairan-item">
+                <div class="pencairan-info">
+                  <span class="font-medium text-sm">{{ p.namaAnggota }}</span>
+                  <span class="money font-semibold">{{ formatRupiah(p.jumlah) }}</span>
+                </div>
+                <p class="text-xs text-muted" v-if="p.keterangan">{{ p.keterangan }}</p>
+                <div class="pencairan-actions">
+                  <button class="btn btn-success btn-sm" @click="prosesPencairan(p.id, true)" :disabled="prosesLoading===p.id">
+                    <span v-if="prosesLoading===p.id" class="spinner" style="width:10px;height:10px;border-width:2px"/>
+                    <span v-else>✓ Setujui</span>
+                  </button>
+                  <button class="btn btn-danger btn-sm" @click="prosesPencairan(p.id, false)" :disabled="prosesLoading===p.id">
+                    <span v-if="prosesLoading===p.id" class="spinner" style="width:10px;height:10px;border-width:2px"/>
+                    <span v-else>✗ Tolak</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-ghost" @click="showPencairan=false">Tutup</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+</div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { Users, Eye, X } from 'lucide-vue-next'
-import { adminApi } from '@/services/api'
+import { Users, Eye, X, Plus, UserCheck, UserPlus, Wallet } from 'lucide-vue-next'
+import { adminApi, adminKelompokApi, kelompokApi } from '@/services/api'
 import { formatRupiah, formatDate, statusBadge, parsePage } from '@/services/helpers'
 import { toast } from 'vue3-toastify'
 
@@ -237,6 +404,129 @@ async function submitTeguran() {
   } catch(e) {
     toast.error(e.response?.data?.message || 'Gagal mengirim teguran')
   } finally { submitting.value = false }
+}
+
+
+// ── Admin Kelola Kelompok ─────────────────────────────────────
+const showBuatKelompok   = ref(false)
+const showGantiLeader    = ref(false)
+const showTambahAnggota  = ref(false)
+const selectedKelompok   = ref(null)
+const memberBebas        = ref([])
+const anggotaKelompok    = ref([])
+const submitLoading      = ref(false)
+
+const formBuat = ref({ namaKelompok: '', leaderId: '', deskripsi: '' })
+const formGantiLeader = ref({ newLeaderId: '' })
+const formTambahAnggota = ref({ userIds: [] })
+
+async function loadMemberBebas() {
+  try {
+    const res = await kelompokApi.memberBebas()
+    memberBebas.value = res.data.data || []
+  } catch(e) { memberBebas.value = [] }
+}
+
+
+const showPencairan       = ref(false)
+const pencairanPendingList = ref([])
+const loadingPencairan    = ref(false)
+const prosesLoading       = ref(null)
+
+async function openPencairan(row) {
+  selectedKelompok.value = row
+  showPencairan.value = true
+  loadingPencairan.value = true
+  try {
+    const res = await adminKelompokApi.getPencairanPending(row.id)
+    pencairanPendingList.value = res.data.data || []
+  } catch(e) {
+    toast.error('Gagal load data pencairan')
+  } finally {
+    loadingPencairan.value = false
+  }
+}
+
+async function prosesPencairan(pencairanId, disetujui) {
+  prosesLoading.value = pencairanId
+  try {
+    await adminKelompokApi.prosesPencairan(pencairanId, { disetujui, keteranganAdmin: '' })
+    toast.success(disetujui ? 'Pencairan disetujui!' : 'Pencairan ditolak!')
+    // Refresh list
+    await openPencairan(selectedKelompok.value)
+    load()
+  } catch(e) {
+    toast.error(e.response?.data?.message || 'Gagal proses pencairan')
+  } finally {
+    prosesLoading.value = null
+  }
+}
+
+async function openBuatKelompok() {
+  await loadMemberBebas()
+  formBuat.value = { namaKelompok: '', leaderId: '', deskripsi: '' }
+  showBuatKelompok.value = true
+}
+
+async function openGantiLeader(row) {
+  selectedKelompok.value = row
+  formGantiLeader.value = { newLeaderId: '' }
+  // Load detail untuk dapat daftar anggota
+  const res = await adminKelompokApi.getDetail(row.id)
+  anggotaKelompok.value = res.data.data?.anggotaList || []
+  showGantiLeader.value = true
+}
+
+async function openTambahAnggota(row) {
+  selectedKelompok.value = row
+  formTambahAnggota.value = { userIds: [] }
+  await loadMemberBebas()
+  showTambahAnggota.value = true
+}
+
+async function submitBuatKelompok() {
+  if (!formBuat.value.namaKelompok || !formBuat.value.leaderId) {
+    toast.error('Nama kelompok dan leader wajib diisi')
+    return
+  }
+  submitLoading.value = true
+  try {
+    await adminKelompokApi.buatKelompok(formBuat.value)
+    toast.success('Kelompok berhasil dibuat!')
+    showBuatKelompok.value = false
+    load()
+  } catch(e) {
+    toast.error(e.response?.data?.message || 'Gagal membuat kelompok')
+  } finally { submitLoading.value = false }
+}
+
+async function submitGantiLeader() {
+  if (!formGantiLeader.value.newLeaderId) {
+    toast.error('Pilih leader baru')
+    return
+  }
+  submitLoading.value = true
+  try {
+    await adminKelompokApi.gantiLeader(selectedKelompok.value.id, formGantiLeader.value)
+    toast.success('Leader berhasil diganti!')
+    showGantiLeader.value = false
+    load()
+  } catch(e) {
+    toast.error(e.response?.data?.message || 'Gagal ganti leader')
+  } finally { submitLoading.value = false }
+}
+
+async function submitTambahAnggota() {
+  if (formTambahAnggota.value.userIds.length === 0) return
+  submitLoading.value = true
+  try {
+    await adminKelompokApi.tambahAnggota(selectedKelompok.value.id, { userIds: formTambahAnggota.value.userIds })
+    toast.success('Anggota berhasil ditambahkan!')
+    showTambahAnggota.value = false
+    load()
+  } catch(e) {
+    toast.error(e.response?.data?.message || 'Gagal tambah anggota')
+  } finally { submitLoading.value = false }
 }
 
 onMounted(load)

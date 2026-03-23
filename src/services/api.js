@@ -131,6 +131,15 @@ export const reportApi = {
 }
 
 // ── Admin ────────────────────────────────────────────────────
+export const adminKelompokApi = {
+  getAllKelompok:   (params) => api.get('/admin/kelompok', { params }),
+  getDetail:        (id)     => api.get(`/admin/kelompok/${id}`),
+  buatKelompok:     (data)   => api.post('/admin/kelompok', data),
+  tambahAnggota:    (id, data) => api.post(`/admin/kelompok/${id}/anggota`, data),
+  gantiLeader:      (id, data) => api.put(`/admin/kelompok/${id}/leader`, data),
+  bubarkanKelompok: (id)     => api.delete(`/admin/kelompok/${id}`),
+}
+
 export const adminApi = {
   // Member
   members:       (params)     => api.get('/admin/members', { params }),

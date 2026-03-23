@@ -137,7 +137,7 @@ koperasi-frontend/
 
 | Role | Email | Password |
 |------|-------|----------|
-| Admin | admin@koperasi.id | admin123 |
+| Admin | admin@koperasi.id | xxxxxxxx |
 | Member | member@koperasi.id | member123 |
 
 ---
