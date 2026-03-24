@@ -29,6 +29,7 @@
           <SidebarLink to="/admin/approval" icon="ClipboardCheck" label="Pengajuan" :collapsed="sidebarCollapsed" :badge="approvalStore.pendingCount" />
           <SidebarLink to="/admin/kelompok"  icon="Users"           label="Kelompok"  :collapsed="sidebarCollapsed" />
           <SidebarLink to="/admin/laporan"   icon="FileBarChart"    label="Laporan"   :collapsed="sidebarCollapsed" />
+          <SidebarLink to="/admin/audit-logs" icon="Activity"        label="Log Audit" :collapsed="sidebarCollapsed" />
         </template>
 
         <template v-else>

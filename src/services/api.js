@@ -178,6 +178,9 @@ export const adminApi = {
   dashboard:     ()              => api.get('/admin/report/dashboard'),
   rekapSimpanan: ()              => api.get('/admin/report/rekap-simpanan'),
   rekapPinjaman: ()              => api.get('/admin/report/rekap-pinjaman'),
+
+  // Audit Log
+  auditLogs:     (params)        => api.get('/admin/audit-logs', { params }),
 }
 
 export const slipApi = {

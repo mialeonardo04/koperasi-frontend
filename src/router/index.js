@@ -24,6 +24,7 @@ const routes = [
       { path: 'admin/approval',  name: 'AdminApproval',  component: () => import('@/views/admin/AdminApprovalView.vue'),  meta: { admin: true } },
       { path: 'admin/laporan',   name: 'AdminLaporan',   component: () => import('@/views/admin/AdminLaporanView.vue'),   meta: { admin: true } },
       { path: 'admin/kelompok',  name: 'AdminKelompok',  component: () => import('@/views/admin/AdminKelompokView.vue'),  meta: { admin: true } },
+      { path: 'admin/audit-logs',name: 'AdminAuditLog',  component: () => import('@/views/admin/AdminAuditLogView.vue'), meta: { admin: true } },
     ]
   }
 ]
