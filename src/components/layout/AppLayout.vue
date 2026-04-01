@@ -125,7 +125,6 @@
 import { ref, computed, watch } from 'vue'
 import { useRouter, useRoute, RouterView } from 'vue-router'
 import { Menu, LogOut } from 'lucide-vue-next'
-import { adminApi } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import { useApprovalStore } from '@/stores/approval'
 import { useWindowSize } from '@vueuse/core'
@@ -164,6 +163,7 @@ const pageTitle = computed(() => {
     AdminLaporan:   'Laporan',
     AdminApproval:  'Persetujuan Transaksi',
     AdminKelompok:  'Manajemen Kelompok',
+    AdminAuditLog:  'Log Audit',
   }
   return map[route.name] || 'Koperasi Leyangan'
 })
